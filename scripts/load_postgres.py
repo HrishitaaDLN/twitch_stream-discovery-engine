@@ -14,7 +14,7 @@ import psycopg2
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL", "postgresql://streammatch:streammatch@localhost:5432/streammatch"
+    "DATABASE_URL", "postgresql://streammatch:streammatch@localhost:5433/streammatch"
 )
 
 # Order matters: respect FK dependencies.

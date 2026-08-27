@@ -1,3 +1,5 @@
 numpy>=1.26
 pandas>=2.2
 psycopg2-binary>=2.9
+kafka-python>=2.0
+redis>=5.0

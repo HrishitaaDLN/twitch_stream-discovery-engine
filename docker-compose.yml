@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: streammatch
       POSTGRES_DB: streammatch
     ports:
-      - "5432:5432"
+      - "5433:5432"  # 5432 conflicts with a native Windows postgres install on this machine
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
@@ -17,5 +17,50 @@ services:
       timeout: 5s
       retries: 10
 
+  redpanda:
+    # Redpanda over Kafka: single binary, no ZooKeeper, ~1GB RAM footprint --
+    # laptop-friendly and wire-compatible with the Kafka protocol, so any
+    # kafka-python / confluent-kafka client works unmodified.
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+    container_name: streammatch-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=1G
+      - --overprovisioned
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr=internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr=internal://redpanda:8082,external://localhost:18082
+    ports:
+      - "19092:19092"  # Kafka API (host clients connect here)
+      - "18082:18082"  # HTTP proxy (unused for now)
+      - "9644:9644"    # admin API / healthcheck
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: streammatch-redis
+    # Online feature store is a derived cache, rebuildable from Kafka/Postgres --
+    # no persistence needed, so skip RDB snapshots and AOF entirely.
+    command: redis-server --save "" --appendonly no
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   pg_data:
+  redpanda_data:

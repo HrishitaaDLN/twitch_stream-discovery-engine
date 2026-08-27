@@ -481,6 +481,7 @@ def main():
 
     # Strip internal-only columns before export
     streamers_export = streamers_df.drop(columns=["_peak_baseline"])
+    streamers_export["secondary_category_id"] = streamers_export["secondary_category_id"].astype("Int64")
     streams_export = streams_df.drop(columns=["_start_epoch", "_end_epoch", "_peak"])
 
     categories_df.to_csv(out_path("categories"), index=False)
